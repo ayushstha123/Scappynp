@@ -65,7 +65,7 @@ const SearchBar = () => {
                       <p className='text-lg text-green-500 py-2'>Discount: {item.discount}</p>
                     )}
                     <button>
-                    <a href={item.url} target="_blank" className='bg-gray-900 border px-5 my-5 py-2 text-center border-gray-900  rounded-lg shadow-xs  text-white text-sm font-extralight hover:opacity-90 '>
+                    <a href={item.url} className='bg-gray-900 border px-5 my-5 py-2 text-center border-gray-900  rounded-lg shadow-xs  text-white text-sm font-extralight hover:opacity-90 '>
                         View Product
                     </a></button>
                   </div>
