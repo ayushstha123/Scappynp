@@ -28,6 +28,73 @@ const SearchBar = () => {
     }
   };
 
+  // Helper function to clean and convert the price to a numeric value
+  const cleanAndConvertPrice = (priceString) => {
+    const cleanedString = typeof priceString === 'string' ? priceString : '';
+    return parseFloat(cleanedString.replace(/[^0-9.]/g, '')) || 0;
+  };
+
+  // Find the cheapest product
+  const findCheapestProduct = () => {
+    let cheapestProduct = null;
+
+    Object.keys(productData || {}).forEach((source) => {
+      if (Array.isArray(productData[source])) {
+        productData[source].forEach((item) => {
+          // Clean and convert the price to a numeric value
+          const currentPrice = cleanAndConvertPrice(item.price);
+
+          // Check if the product has a lower price
+          if (!cheapestProduct || currentPrice < cleanAndConvertPrice(cheapestProduct.price)) {
+            cheapestProduct = {
+              ...item,
+              source,
+            };
+          }
+        });
+      }
+    });
+
+    return cheapestProduct;
+  };
+
+  const renderCheapestProduct = () => {
+    const cheapestProduct = findCheapestProduct();
+
+    return cheapestProduct ? (
+      <div className='bg-blue-300 shadow-lg rounded-lg overflow-hidden my-5'>
+        <div className='bg-blue-500 text-white py-3 px-4'>
+          <h1 className='font-medium text-2xl'>Cheapest Product</h1>
+        </div>
+        <div className='p-4 flex gap-10 border'>
+          <img src={cheapestProduct.img} alt={cheapestProduct.title} className='w-28 h-28 object-contain' />
+          <div>
+            <p className='text-xl font-semibold text-gray-800 my-2'>{cheapestProduct.title}</p>
+            <p className='text-lg text-gray-600 mb-2'>Price: {cheapestProduct.price}</p>
+
+            {cheapestProduct.originalPrice && (
+              <p className='text-lg text-gray-600'>Original Price:<del>{cheapestProduct.originalPrice}</del> </p>
+            )}
+
+            {cheapestProduct.discount && (
+              <p className='text-lg text-green-500 py-2'>Discount: {cheapestProduct.discount}</p>
+            )}
+            <button>
+              <a
+                href={cheapestProduct.url}
+                target='_blank'
+                className='bg-gray-900 border px-5 py-1 text-center border-gray-900 rounded-lg shadow-xs text-white text-sm font-extralight hover:opacity-90 '
+              >
+                View
+              </a>
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null;
+  };
+
+
   return (
     <div>
       <form className='flex flex-col gap-3' onSubmit={fetchData}>
@@ -44,30 +111,33 @@ const SearchBar = () => {
           </button>
         </div>
 
-        {productData && Object.keys(productData).map((source) => (
+        {renderCheapestProduct()}
+
+        {Object.keys(productData || {}).map((source) => (
           <div className='bg-white shadow-lg rounded-lg overflow-hidden my-5 ' key={source}>
             <div className='bg-red-500 text-white py-3 px-4'>
               <h1 className='font-bold text-3xl'>{source}</h1>
             </div>
             {Array.isArray(productData[source]) ? (
               productData[source].map((item, index) => (
-                <div className='p-4 flex gap-10' key={index}>
+                <div className='p-4 flex gap-10 border' key={index}>
                   <img src={item.img} alt={item.title} className='w-48 h-48 object-contain' />
                   <div>
                     <p className='text-xl font-semibold text-gray-800 my-2'>{item.title}</p>
                     <p className='text-lg text-gray-600 mb-2'>Price: {item.price}</p>
 
-                    {item.originalPrice ? (
+                    {item.originalPrice && (
                       <p className='text-lg text-gray-600'>Original Price:<del>{item.originalPrice}</del> </p>
-                    ): ''}
+                    )}
                     
                     {item.discount && (
                       <p className='text-lg text-green-500 py-2'>Discount: {item.discount}</p>
                     )}
                     <button>
-                    <a href={item.url} className='bg-gray-900 border px-5 my-5 py-2 text-center border-gray-900  rounded-lg shadow-xs  text-white text-sm font-extralight hover:opacity-90 '>
+                      <a href={item.url} target='_blank' className='bg-gray-900 border px-5 my-5 py-2 text-center border-gray-900  rounded-lg shadow-xs  text-white text-sm font-extralight hover:opacity-90 '>
                         View Product
-                    </a></button>
+                      </a>
+                    </button>
                   </div>
                 </div>
               ))

@@ -2,19 +2,25 @@ import puppeteer from 'puppeteer';
 
 export async function scrapeHamroBazarProduct(productName) {
   try {
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
     await page.goto(`https://hamrobazaar.com/search/product?q=${productName}`);
+
     await page.waitForSelector('select[name="sortParam"]');
-
-    await page.select('select[name="sortParam"]', '5');
-
-    // Scroll down to load more products
     await autoScroll(page);
 
-    // Wait for the product cards to load
-    await page.waitForSelector('.product-list .card-product-linear', { visible: false });
+    const areElementsPresent = await page
+      .waitForSelector('.product-title', { visible: true, timeout: 3000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!areElementsPresent) {
+      await browser.close();
+      return JSON.stringify({ message: 'An error occurred while scraping the product data.' });
+    }
+
+    await page.waitForSelector('.product-list .card-product-linear', { visible: true });
 
     const productItems = await page.$$('.product-list .card-product-linear');
 
@@ -37,12 +43,20 @@ export async function scrapeHamroBazarProduct(productName) {
       })
     );
 
-    await browser.close();
+ // Sorting by price from cheap to expensive
+products.sort((a, b) => {
+  const priceA = parseFloat(a.price.replace(/[^\d.]/g, '')); // Remove non-numeric characters
+  const priceB = parseFloat(b.price.replace(/[^\d.]/g, '')); // Remove non-numeric characters
+  return priceA - priceB;
+});
 
+
+    await browser.close();
+    
     if (products.length === 0) {
       return [{ title: 'No products found' }];
     }
-
+    
     return products;
   } catch (error) {
     return JSON.stringify({ message: 'An error occurred while scraping the product data.' });

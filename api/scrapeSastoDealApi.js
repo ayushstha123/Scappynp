@@ -13,9 +13,13 @@ export async function scrapeSastoDealProduct(productName) {
     const searchUrl = `https://www.sastodeal.com/default/catalogsearch/result/index/?product_list_order=ratings_summary&q=${formattedProductName}`;
 
     await page.goto(searchUrl);
+    const selector = '.product-item-name a'; // Replace this with the actual selector you want to wait for
+    const areElementsPresent = await page.waitForSelector(selector, { visible: true, timeout: 2000 }).then(() => true).catch(() => false);
 
-    // Adjust waiting conditions as needed to ensure all relevant elements are loaded
-    await page.waitForSelector('li.item.product', { visible: true, timeout: 10000 });
+    if (!areElementsPresent) {
+      await browser.close();
+      return JSON.stringify({ message: 'An error occurred while scraping the product data.' });;
+    }
 
     const products = await page.$$eval('li.item.product', (productElements) => {
       return productElements
@@ -28,9 +32,7 @@ export async function scrapeSastoDealProduct(productName) {
           const actualPriceElement = product.querySelector('.old-price .price');
           const actualPrice = actualPriceElement ? actualPriceElement.textContent.trim() : '';
 
-       
-      
-          const price = parseFloat(product.querySelector('.price-wrapper .price ').textContent.replace(/[^\d.]/g, '')) || 0;
+          const price = parseFloat(product.querySelector('.price-wrapper .price').textContent.replace(/[^\d.]/g, '')) || 0;
           const imgElement = product.querySelector('.product-image-wrapper img');
           const imgSrc = imgElement.getAttribute('src');
 
@@ -38,7 +40,7 @@ export async function scrapeSastoDealProduct(productName) {
             title,
             price,
             img: imgSrc,
-            originalPrice:actualPrice,
+            originalPrice: actualPrice,
             url,
           };
         })

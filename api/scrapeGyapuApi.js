@@ -52,4 +52,3 @@ export async function scrapeGyapuProduct(productName) {
     return JSON.stringify({ message: 'An error occurred while scraping the product data.' });
   }
 }
-
