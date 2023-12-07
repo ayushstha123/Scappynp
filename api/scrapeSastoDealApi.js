@@ -10,48 +10,61 @@ export async function scrapeSastoDealProduct(productName) {
 
     // Modify the search term
     const formattedProductName = productName.replace(/\W+/g, '-').toLowerCase();
-    const searchUrl = `https://www.sastodeal.com/default/catalogsearch/result/index/?product_list_order=ratings_summary&q=${formattedProductName}`;
+    const searchUrl = `https://www.sastodeal.com/default/catalogsearch/result/index/?product_list_order=ratings_summary&q="${formattedProductName}"`;
 
     await page.goto(searchUrl);
     const selector = '.product-item-name a'; // Replace this with the actual selector you want to wait for
-    const areElementsPresent = await page.waitForSelector(selector, { visible: true, timeout: 2000 }).then(() => true).catch(() => false);
 
-    if (!areElementsPresent) {
+    try {
+      // Wait for the main content to be present
+      await page.waitForSelector(selector, { visible: true, timeout: 2000 });
+
+      const products = await page.$$eval('li.item.product', (productElements) => {
+        return productElements
+          .slice(0, 5)
+          .map((product) => {
+            const urlElement = product.querySelector('.product-item-name a');
+            const url = urlElement ? urlElement.getAttribute('href') : '';
+
+            const titleElement = product.querySelector('.product-item-link');
+            const title = titleElement ? titleElement.textContent.trim() : '';
+
+            const actualPriceElement = product.querySelector('.old-price .price');
+            const actualPrice = actualPriceElement ? actualPriceElement.textContent.trim() : '';
+
+            const priceElement = product.querySelector('.price-wrapper .price');
+            const price = priceElement ? parseFloat(priceElement.textContent.replace(/[^\d.]/g, '')) || 0 : 0;
+
+            const imgElement = product.querySelector('.product-image-wrapper img');
+            const imgSrc = imgElement ? imgElement.getAttribute('src') : '';
+
+            return {
+              title,
+              price,
+              img: imgSrc,
+              originalPrice: actualPrice,
+              url,
+            };
+          });
+      });
+
+      // Filter out irrelevant products based on an exact match
+      const relevantProducts = products.filter((product) =>
+        product.title.toLowerCase().includes(productName.toLowerCase())
+      );
+
       await browser.close();
-      return JSON.stringify({ message: 'An error occurred while scraping the product data.' });;
+
+      if (relevantProducts.length === 0) {
+        return JSON.stringify({ message : 'No relevant products found' });
+      }
+
+      return relevantProducts;
+    } catch (error) {
+      // Handle timeout or other errors
+      await browser.close();
+      return JSON.stringify({ message: `An error occurred while scraping the product data: ${error.message}` });
     }
-
-    const products = await page.$$eval('li.item.product', (productElements) => {
-      return productElements
-        .slice(0, 5)
-        .map((product) => {
-          const urlElement = product.querySelector('.product-item-name a');
-          const url = urlElement.getAttribute('href');
-          const title = product.querySelector('.product-item-link').textContent;
-
-          const actualPriceElement = product.querySelector('.old-price .price');
-          const actualPrice = actualPriceElement ? actualPriceElement.textContent.trim() : '';
-
-          const price = parseFloat(product.querySelector('.price-wrapper .price').textContent.replace(/[^\d.]/g, '')) || 0;
-          const imgElement = product.querySelector('.product-image-wrapper img');
-          const imgSrc = imgElement.getAttribute('src');
-
-          return {
-            title,
-            price,
-            img: imgSrc,
-            originalPrice: actualPrice,
-            url,
-          };
-        })
-        .sort((a, b) => a.price - b.price); // Sort products based on price (ascending order)
-    });
-
-    await browser.close();
-    if (products.length === 0) {
-      return [{ title: 'No products found' }];
-    }
-    return products;
   } catch (error) {
     return JSON.stringify({ message: 'An error occurred while scraping the product data.' });
   }

@@ -2,10 +2,13 @@ import puppeteer from 'puppeteer';
 
 export async function scrapeHamroBazarProduct(productName) {
   try {
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
 
-    await page.goto(`https://hamrobazaar.com/search/product?q=${productName}`);
+    // Encode the search query
+    const encodedProductName = encodeURIComponent(productName);
+
+    await page.goto(`https://hamrobazaar.com/search/product?q=${encodedProductName}`);
 
     await page.waitForSelector('select[name="sortParam"]');
     await autoScroll(page);
@@ -15,9 +18,13 @@ export async function scrapeHamroBazarProduct(productName) {
       .then(() => true)
       .catch(() => false);
 
+    const singularForm = productName.toLowerCase();
+    const pluralForm = productName.endsWith('s') ? productName.toLowerCase() : productName.toLowerCase() + 's';
+    const searchRegex = new RegExp(`\\b(${singularForm}|${pluralForm})\\b`, 'i');
+    
     if (!areElementsPresent) {
       await browser.close();
-      return JSON.stringify({ message: 'An error occurred while scraping the product data.' });
+      return JSON.stringify({ message: 'An error occurred while scraping the product data. Required elements not found.' });
     }
 
     await page.waitForSelector('.product-list .card-product-linear', { visible: true });
@@ -43,23 +50,27 @@ export async function scrapeHamroBazarProduct(productName) {
       })
     );
 
- // Sorting by price from cheap to expensive
-products.sort((a, b) => {
-  const priceA = parseFloat(a.price.replace(/[^\d.]/g, '')); // Remove non-numeric characters
-  const priceB = parseFloat(b.price.replace(/[^\d.]/g, '')); // Remove non-numeric characters
-  return priceA - priceB;
-});
+    // Sorting by price from cheap to expensive
+    products.sort((a, b) => {
+      const priceA = parseFloat(a.price.replace(/[^\d.]/g, '')); // Remove non-numeric characters
+      const priceB = parseFloat(b.price.replace(/[^\d.]/g, '')); // Remove non-numeric characters
+      return priceA - priceB;
+    });
 
+    // Filter out irrelevant products based on a case-insensitive match
+    const relevantProducts = products.filter((product) =>
+    product.title.toLowerCase().includes(productName.toLowerCase())
+  );
 
     await browser.close();
-    
-    if (products.length === 0) {
-      return [{ title: 'No products found' }];
+
+    if (relevantProducts.length === 0) {
+      return JSON.stringify({ message: 'No relevant products found' });
     }
-    
-    return products;
+
+    return relevantProducts;
   } catch (error) {
-    return JSON.stringify({ message: 'An error occurred while scraping the product data.' });
+    return JSON.stringify({ message: `An error occurred while scraping the product data: ${error.message}` });
   }
 }
 
