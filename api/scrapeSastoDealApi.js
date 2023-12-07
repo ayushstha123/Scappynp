@@ -21,7 +21,7 @@ export async function scrapeSastoDealProduct(productName) {
 
       const products = await page.$$eval('li.item.product', (productElements) => {
         return productElements
-          .slice(0, 5)
+          .slice(0, 10)
           .map((product) => {
             const urlElement = product.querySelector('.product-item-name a');
             const url = urlElement ? urlElement.getAttribute('href') : '';
@@ -33,7 +33,7 @@ export async function scrapeSastoDealProduct(productName) {
             const actualPrice = actualPriceElement ? actualPriceElement.textContent.trim() : '';
 
             const priceElement = product.querySelector('.price-wrapper .price');
-            const price = priceElement ? parseFloat(priceElement.textContent.replace(/[^\d.]/g, '')) || 0 : 0;
+            const price = priceElement ? priceElement.textContent.replace(/[^0-9]/g, '') : 'Price not found';
 
             const imgElement = product.querySelector('.product-image-wrapper img');
             const imgSrc = imgElement ? imgElement.getAttribute('src') : '';
@@ -52,7 +52,18 @@ export async function scrapeSastoDealProduct(productName) {
       const relevantProducts = products.filter((product) =>
         product.title.toLowerCase().includes(productName.toLowerCase())
       );
-
+      relevantProducts.sort((a, b) => {
+        const priceA = parseFloat(a.price);
+        const priceB = parseFloat(b.price);
+      
+        // Check if prices are valid numbers before comparison
+        if (!isNaN(priceA) && !isNaN(priceB)) {
+          return priceA - priceB;
+        } else {
+          // If either price is not a valid number, keep the current order
+          return 0;
+        }
+      });
       await browser.close();
 
       if (relevantProducts.length === 0) {

@@ -3,17 +3,20 @@ import puppeteer from 'puppeteer';
 export async function scrapeDarazProduct(productName) {
   try {
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-maximized'],
     });
 
     const page = await browser.newPage();
-    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setViewport({ width: 2020, height: 3080 });
+    
+    const formattedProductName = productName.replace(/[:,_]/g, '');
+    const singularForm = formattedProductName;
+    const pluralForm = formattedProductName.endsWith('s') ? formattedProductName : formattedProductName + 's';
+    
+// Create a case-insensitive regular expression with a requirement of at least two common letters
+const searchRegex = new RegExp(`(?=.*[a-zA-Z].*[a-zA-Z])(${singularForm}|${pluralForm})`, 'i');
 
-    // Modify the search term to include both singular and plural forms
-    const singularForm = productName;
-    const pluralForm = productName.endsWith('s') ? productName : productName + 's';
-    const searchRegex = new RegExp(`(${singularForm}|${pluralForm})`, 'i');
     const encodedProductName = encodeURIComponent(productName);
     const url = `https://www.daraz.com.np/catalog/?q=${encodedProductName}`;
 
@@ -31,9 +34,10 @@ export async function scrapeDarazProduct(productName) {
     await page.waitForSelector('.gridItem--Yd0sa', { visible: true });
 
     const products = await page.$$eval('.gridItem--Yd0sa', (productItems) => {
-      return productItems.slice(0, 5).map((productItem) => {
+      return productItems.slice(0, 10).map((productItem) => {
         const title = productItem.querySelector('.title--wFj93 a').textContent;
-        const price = productItem.querySelector('.price--NVB62').textContent;
+        const priceElement = productItem.querySelector('.price--NVB62');
+        const price = priceElement ? priceElement.textContent.replace(/[^0-9]/g, '') : 'Price not found';     
         const discountElement = productItem.querySelector('.discount--HADrg');
         const discount = discountElement ? discountElement.textContent : 'No discount';
 
@@ -61,6 +65,19 @@ export async function scrapeDarazProduct(productName) {
     const relevantProducts = products.filter((product) =>
       searchRegex.test(product.title.toLowerCase())
     );
+// Sort the relevant products by price in ascending order
+relevantProducts.sort((a, b) => {
+  const priceA = parseFloat(a.price);
+  const priceB = parseFloat(b.price);
+
+  // Check if prices are valid numbers before comparison
+  if (!isNaN(priceA) && !isNaN(priceB)) {
+    return priceA - priceB;
+  } else {
+    // If either price is not a valid number, keep the current order
+    return 0;
+  }
+});
 
     await browser.close();
 

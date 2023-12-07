@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 
 export async function scrapeHamroBazarProduct(productName) {
   try {
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
     // Encode the search query
@@ -18,9 +18,11 @@ export async function scrapeHamroBazarProduct(productName) {
       .then(() => true)
       .catch(() => false);
 
-    const singularForm = productName.toLowerCase();
-    const pluralForm = productName.endsWith('s') ? productName.toLowerCase() : productName.toLowerCase() + 's';
-    const searchRegex = new RegExp(`\\b(${singularForm}|${pluralForm})\\b`, 'i');
+      const singularForm = productName;
+      const pluralForm = productName.endsWith('s') ? productName : productName + 's';
+      
+      // Create a case-insensitive regular expression with a requirement of at least two common letters
+      const searchRegex = new RegExp(`(?=.*[a-zA-Z].*[a-zA-Z])(${singularForm}|${pluralForm})`, 'i');
     
     if (!areElementsPresent) {
       await browser.close();
@@ -36,7 +38,9 @@ export async function scrapeHamroBazarProduct(productName) {
     const products = await Promise.all(
       productItems.slice(0, maxProductCount).map(async (productItem) => {
         const title = await productItem.$eval('.product-title', (element) => element.textContent);
-        const price = await productItem.$eval('.regularPrice', (element) => element.textContent);
+        const priceElement = await productItem.$('.regularPrice');
+        const price = priceElement ? await priceElement.evaluate((element) => element.textContent.replace(/[^0-9]/g, '')) : 'Price not found';
+        
         const imgElement = await productItem.$('.linear-img');
         const imgSrc = await imgElement.evaluate((element) => element.getAttribute('src'));
         const url = await productItem.$eval('a[target="_blank"]', (element) => element.getAttribute('href'));
@@ -50,28 +54,33 @@ export async function scrapeHamroBazarProduct(productName) {
       })
     );
 
-    // Sorting by price from cheap to expensive
-    products.sort((a, b) => {
-      const priceA = parseFloat(a.price.replace(/[^\d.]/g, '')); // Remove non-numeric characters
-      const priceB = parseFloat(b.price.replace(/[^\d.]/g, '')); // Remove non-numeric characters
-      return priceA - priceB;
-    });
-
-    // Filter out irrelevant products based on a case-insensitive match
     const relevantProducts = products.filter((product) =>
-    product.title.toLowerCase().includes(productName.toLowerCase())
+    searchRegex.test(product.title.toLowerCase())
   );
+// Sort the relevant products by price in ascending order
+relevantProducts.sort((a, b) => {
+const priceA = parseFloat(a.price);
+const priceB = parseFloat(b.price);
 
-    await browser.close();
+// Check if prices are valid numbers before comparison
+if (!isNaN(priceA) && !isNaN(priceB)) {
+  return priceA - priceB;
+} else {
+  // If either price is not a valid number, keep the current order
+  return 0;
+}
+});
 
-    if (relevantProducts.length === 0) {
-      return JSON.stringify({ message: 'No relevant products found' });
-    }
+  await browser.close();
 
-    return relevantProducts;
-  } catch (error) {
-    return JSON.stringify({ message: `An error occurred while scraping the product data: ${error.message}` });
+  if (relevantProducts.length === 0) {
+    return JSON.stringify({ message: 'No relevant products found' });
   }
+
+  return relevantProducts;
+} catch (error) {
+  return JSON.stringify({ message: `An error occurred while scraping the product data: ${error.message}` });
+}
 }
 
 async function autoScroll(page) {

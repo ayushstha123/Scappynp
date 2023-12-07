@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 export async function scrapeGyapuProduct(productName) {
   try {
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
     const page = await browser.newPage();
@@ -21,10 +21,11 @@ export async function scrapeGyapuProduct(productName) {
     
 
     const products = await page.evaluate(() => {
-      const productItems = Array.from(document.querySelectorAll('.SrchRightTop .fscont')).slice(0, 5);
+      const productItems = Array.from(document.querySelectorAll('.SrchRightTop .fscont')).slice(0, 10);
       return productItems.map((productItem) => {
         const titleElement = productItem.querySelector('.fsdet_title');
         const priceElement = productItem.querySelector('.price.text__price');
+        const price = priceElement ? priceElement.textContent.replace(/[^0-9]/g, '') : 'Price not found'; 
         const discountElement = productItem.querySelector('.discount-badge-wrapper .bg-green-500');
         const imgElement = productItem.querySelector('img');
 
@@ -37,7 +38,6 @@ export async function scrapeGyapuProduct(productName) {
 
         // Check if elements exist before accessing 'textContent'
         const title = titleElement ? titleElement.textContent : 'Title not found';
-        const price = priceElement ? priceElement.textContent : 'Price not found';
         const discount = discountElement ? discountElement.textContent : 'No discount';
 
         return {
@@ -55,6 +55,19 @@ export async function scrapeGyapuProduct(productName) {
     const relevantProducts = products.filter((product) =>
       product.title.toLowerCase().includes(productName.toLowerCase())
     );
+    // Sort the relevant products by price in ascending order
+relevantProducts.sort((a, b) => {
+  const priceA = parseFloat(a.price);
+  const priceB = parseFloat(b.price);
+
+  // Check if prices are valid numbers before comparison
+  if (!isNaN(priceA) && !isNaN(priceB)) {
+    return priceA - priceB;
+  } else {
+    // If either price is not a valid number, keep the current order
+    return 0;
+  }
+});
 
     await browser.close();
 
@@ -63,7 +76,7 @@ export async function scrapeGyapuProduct(productName) {
     if (relevantProducts.length === 0) {
       return JSON.stringify({ message : 'No relevant products found' });
     }
-    return products;
+    return relevantProducts;
   } catch (error) {
     return JSON.stringify({ message: 'An error occurred while scraping the product data.' });
   }

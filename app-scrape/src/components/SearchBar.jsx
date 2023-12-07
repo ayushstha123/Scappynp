@@ -62,7 +62,9 @@ const SearchBar = () => {
     const cheapestProduct = findCheapestProduct();
 
     return cheapestProduct ? (
+      
       <div className='bg-blue-300 shadow-lg rounded-lg overflow-hidden my-5'>
+        
         <div className='bg-blue-500 text-white py-3 px-4'>
           <h1 className='font-medium text-2xl'>Cheapest Product</h1>
         </div>
@@ -102,15 +104,16 @@ const SearchBar = () => {
           <input
             className='flex-1 min-w-[200px] w-full p-3 border border-gray-300 rounded-lg shadow-xs text-base text-gray-500 focus:outline-none'
             type='text'
-            placeholder="Product Name"
+            placeholder="Please be specific with your product name eg. t-shirt, shoes, laptop etc."
             value={productInput}
             onChange={(e) => setProductInput(e.target.value)}
           />
           <button type='submit' className=' bg-gray-900 border border-gray-900 rounded-lg shadow-xs px-5 py-3 text-white text-base font-semibold hover:opacity-90 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40'>
             {isLoading ? 'Searching..' : 'Search'}
           </button>
+          
         </div>
-
+        {isLoading ? <h1 className=' m-5 text-center text-3xl font-light'>Loading...this might take some time</h1> : ''}
         {renderCheapestProduct()}
 
         {Object.keys(productData || {}).map((source) => (
@@ -124,7 +127,7 @@ const SearchBar = () => {
                   <img src={item.img} alt={item.title} className='w-48 h-48 object-contain' />
                   <div>
                     <p className='text-xl font-semibold text-gray-800 my-2'>{item.title}</p>
-                    <p className='text-lg text-gray-600 mb-2'>Price: {item.price}</p>
+                    <p className='text-lg text-gray-600 mb-2'>Price: Rs. {item.price}</p>
 
                     {item.originalPrice && (
                       <p className='text-lg text-gray-600'>Original Price:<del>{item.originalPrice}</del> </p>
@@ -143,12 +146,13 @@ const SearchBar = () => {
               ))
             ) : (
               <div className='p-4'>
-                <p className='text-xl font-semibold text-gray-800'>No data available for this source.</p>
+                <p className='text-xl font-semibold text-red-800'>No data available for this source.</p>
               </div>
             )}
           </div>
         ))}
-        {!productData && <p>No data available.</p>}
+        {!productData ? <p>No data available.</p> : ''}
+        
       </form>
     </div>
   );
