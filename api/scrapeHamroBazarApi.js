@@ -18,11 +18,14 @@ export async function scrapeHamroBazarProduct(productName) {
       .then(() => true)
       .catch(() => false);
 
-      const singularForm = productName;
-      const pluralForm = productName.endsWith('s') ? productName : productName + 's';
+      const formattedProductName = productName.replace(/[:,_]/g, '');
+      const searchTerms = formattedProductName.split(/\s+/).filter(Boolean);
       
-      // Create a case-insensitive regular expression with a requirement of at least two common letters
-      const searchRegex = new RegExp(`(?=.*[a-zA-Z].*[a-zA-Z])(${singularForm}|${pluralForm})`, 'i');
+      // Create a case-insensitive regular expression with positive lookahead for each search term
+      const searchRegex = new RegExp(
+        `(?=.*${searchTerms.map(term => `\\b${term}\\b`).join(')(?=.*')})`,
+        'i'
+      );
     
     if (!areElementsPresent) {
       await browser.close();

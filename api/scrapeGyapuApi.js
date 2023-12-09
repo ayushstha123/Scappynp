@@ -7,6 +7,14 @@ export async function scrapeGyapuProduct(productName) {
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
     const page = await browser.newPage();
+    const formattedProductName = productName.replace(/[:,_]/g, '');
+    const searchTerms = formattedProductName.split(/\s+/).filter(Boolean);
+    
+    // Create a case-insensitive regular expression with positive lookahead for each search term
+    const searchRegex = new RegExp(
+      `(?=.*${searchTerms.map(term => `\\b${term}\\b`).join(')(?=.*')})`,
+      'i'
+    );
 
     // Modify the search query for an exact match
     await page.goto(`https://gyapu.com/search/${productName}`);
@@ -53,7 +61,7 @@ export async function scrapeGyapuProduct(productName) {
 
     // Filter out irrelevant products based on an exact match
     const relevantProducts = products.filter((product) =>
-      product.title.toLowerCase().includes(productName.toLowerCase())
+      searchRegex.test(product.title.toLowerCase())
     );
     // Sort the relevant products by price in ascending order
 relevantProducts.sort((a, b) => {

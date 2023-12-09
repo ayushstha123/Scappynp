@@ -10,13 +10,21 @@ export async function scrapeDarazProduct(productName) {
     const page = await browser.newPage();
     await page.setViewport({ width: 2020, height: 3080 });
     
-    const formattedProductName = productName.replace(/[:,_]/g, '');
+    const formattedProductName = productName.replace(/[:,-,_]/g, '');
+    const searchTerms = formattedProductName.split(/\s+/).filter(Boolean);
+    
+    // Create a case-insensitive regular expression with positive lookahead for each search term
+    const searchRegex = new RegExp(
+      `(?=.*${searchTerms.map(term => `\\b${term}\\b`).join(')(?=.*')})`,
+      'i'
+    );
+    
     const singularForm = formattedProductName;
     const pluralForm = formattedProductName.endsWith('s') ? formattedProductName : formattedProductName + 's';
     
-// Create a case-insensitive regular expression with a requirement of at least two common letters
-const searchRegex = new RegExp(`(?=.*[a-zA-Z].*[a-zA-Z])(${singularForm}|${pluralForm})`, 'i');
-
+    // Create a case-insensitive regular expression with a requirement of at least two common letters
+    const commonLettersRegex = new RegExp(`(?=.*[a-zA-Z].*[a-zA-Z])(${singularForm}|${pluralForm})`, 'i');
+    
     const encodedProductName = encodeURIComponent(productName);
     const url = `https://www.daraz.com.np/catalog/?q=${encodedProductName}`;
 
@@ -63,7 +71,7 @@ const searchRegex = new RegExp(`(?=.*[a-zA-Z].*[a-zA-Z])(${singularForm}|${plura
 
     // Filter out irrelevant products based on a case-insensitive match
     const relevantProducts = products.filter((product) =>
-      searchRegex.test(product.title.toLowerCase())
+      searchRegex.test(product.title.toLowerCase()) && commonLettersRegex.test(product.title)
     );
 // Sort the relevant products by price in ascending order
 relevantProducts.sort((a, b) => {

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
+
 
 const SearchBar = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [productInput, setProductInput] = useState('');
   const [productData, setProductData] = useState(null);
 
@@ -9,8 +11,9 @@ const SearchBar = () => {
     e.preventDefault();
     try {
       setIsLoading(true);
-      const encodedProductInput = encodeURIComponent(productInput);
+      setLoadingProgress(0);
 
+      const encodedProductInput = encodeURIComponent(productInput);
       const response = await fetch(`http://localhost:3000/api/${encodedProductInput}`);
 
       if (response.ok) {
@@ -25,8 +28,19 @@ const SearchBar = () => {
       console.error('Error fetching data:', error);
     } finally {
       setIsLoading(false);
+      setLoadingProgress(100);
     }
   };
+
+  useEffect(() => {
+    if (isLoading) {
+      const interval = setInterval(() => {
+        setLoadingProgress((prevProgress) => Math.min(prevProgress + 5, 95));
+      }, 600);
+
+      return () => clearInterval(interval);
+    }
+  }, [isLoading]);
 
   // Helper function to clean and convert the price to a numeric value
   const cleanAndConvertPrice = (priceString) => {
@@ -113,7 +127,30 @@ const SearchBar = () => {
           </button>
           
         </div>
-        {isLoading ? <h1 className=' m-5 text-center text-3xl font-light'>Loading...this might take some time</h1> : ''}
+
+        {isLoading ? (
+          <div className='m-5 text-center text-sm font-light'>
+            Loading... it might take sometime depending on your internet connection {loadingProgress}% complete
+            <div className='relative pt-1'>
+              <div className='flex mb-2 items-center justify-between'>
+                <div className='text-right'>
+                  <span className='text-xs font-semibold inline-block text-gray-600'>
+                    {loadingProgress}%
+                  </span>
+                </div>
+              </div>
+              <div className='flex h-2 mb-4 overflow-hidden text-xs'>
+                <div
+                  style={{ width: `${loadingProgress}%` }}
+                  className='flex flex-col justify-center bg-gray-300'
+                ></div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          ''
+        )}
+
         {renderCheapestProduct()}
 
         {Object.keys(productData || {}).map((source) => (
