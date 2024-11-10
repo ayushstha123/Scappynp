@@ -14,8 +14,7 @@ Tech Stack
     Frontend: React.js with Tailwind CSS for UI and product display.
     API: Express.js for serving the scraped data to the frontend.
     </p>
-Images : 
-![image](https://github.com/user-attachments/assets/af520dd6-c295-48e7-af30-436c13301958)
+<img src="https://github.com/user-attachments/assets/af520dd6-c295-48e7-af30-436c13301958"/>
 
 
 Video:
