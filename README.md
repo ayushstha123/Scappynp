@@ -17,6 +17,6 @@ Tech Stack
 <img src="https://github.com/user-attachments/assets/af520dd6-c295-48e7-af30-436c13301958"/>
 
 
-Video:
 https://github.com/user-attachments/assets/6918d3d3-af8b-45d9-a095-62f3ee6a819b
 
+youtube: https://www.youtube.com/watch?v=cRQxKDFh6c0
